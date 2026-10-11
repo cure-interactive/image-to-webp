@@ -5,5 +5,10 @@
   "cache": "_temp/webp-cache.json",
   "quality": 85,
   "method": 6,
-  "excludeDirectoryPrefixes": ["__"]
+  "excludeDirectoryPrefixes": ["__"],
+  "thumbnail": {
+    "suffix": "_Thumb",
+    "maxWidth": 512,
+    "maxHeight": 256
+  }
 }

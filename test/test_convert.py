@@ -75,6 +75,44 @@ class ConvertTest(unittest.TestCase):
             run(self.config)
         self.assertFalse(self.target.exists())
 
+    def test_generate_thumbnail_from_full_size_source(self) -> None:
+        self.config.write_text(json.dumps({
+            "version": 1, "source": "input", "target": "output", "cache": "cache.json",
+            "thumbnail": {"suffix": "_Thumb", "maxWidth": 200, "maxHeight": 100},
+        }), encoding="utf-8")
+        source = self.source / "photo.png"
+        Image.new("RGB", (800, 400), "red").save(source)
+        self.assertEqual(run(self.config), {"converted": 2, "skipped": 0, "planned": 0})
+        with Image.open(self.target / "photo.webp") as image:
+            self.assertEqual(image.size, (800, 400))
+        thumbnail = self.target / "photo_Thumb.webp"
+        with Image.open(thumbnail) as image:
+            self.assertEqual(image.size, (200, 100))
+        self.assertEqual(run(self.config, True), {"converted": 0, "skipped": 2, "planned": 0})
+        self.config.write_text(json.dumps({
+            "version": 1, "source": "input", "target": "output", "cache": "cache.json",
+            "thumbnail": {"suffix": "_Thumb", "maxWidth": 100, "maxHeight": 100},
+        }), encoding="utf-8")
+        self.assertEqual(run(self.config), {"converted": 1, "skipped": 1, "planned": 0})
+        with Image.open(thumbnail) as image:
+            self.assertEqual(image.size, (100, 50))
+        Image.new("RGB", (800, 400), "blue").save(source)
+        self.assertEqual(run(self.config), {"converted": 2, "skipped": 0, "planned": 0})
+        thumbnail.write_bytes(b"independent edit")
+        with self.assertRaisesRegex(ValueError, "refusing to overwrite"):
+            run(self.config)
+
+    def test_thumbnail_collision_with_existing_source(self) -> None:
+        self.config.write_text(json.dumps({
+            "version": 1, "source": "input", "target": "output", "cache": "cache.json",
+            "thumbnail": {"suffix": "_Thumb", "maxWidth": 200, "maxHeight": 100},
+        }), encoding="utf-8")
+        self.image_save("photo.png", "red")
+        self.image_save("photo_Thumb.png", "blue")
+        with self.assertRaisesRegex(ValueError, "output collision"):
+            run(self.config)
+        self.assertFalse(self.target.exists())
+
 
 if __name__ == "__main__":
     unittest.main()
