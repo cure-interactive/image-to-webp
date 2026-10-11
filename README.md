@@ -13,16 +13,18 @@ Convert a directory of raster images to WebP while retaining its subdirectory la
 python setup.py --venv
 ```
 
-This creates `.venv` beside the script and installs `requirements.txt`. The setup command works from any current directory; use `--print-only` to inspect its commands. Activate the environment or run its Python directly when using `convert.py`.
+This creates `.venv` beside the script and installs `requirements.txt`. The setup command works from any current directory; use `--print-only` to inspect its commands. Activate the environment or run its Python directly when using `image-to-webp.py`.
 
 ## Configure and run
 
 Copy `config.example.json` and set `source`, `target`, and `cache`. Relative paths resolve from the JSON file, so the command can run from any working directory. `source` and `target` must differ. The tool creates the target and cache directories when needed.
 
 ```sh
-python convert.py --config path/to/config.json --dry-run
-python convert.py --config path/to/config.json
+python image-to-webp.py --config path/to/config.json --dry-run
+python image-to-webp.py --config path/to/config.json
 ```
+
+`image-to-webp.py` is the repository-named CLI entry point. `convert.py` retains the same command-line options and Python `run()` interface for existing callers, including the Cure Interactive development wiki.
 
 `quality` is 1–100 (default 85), and `method` is 0–6 (default 6). `excludeDirectoryPrefixes` ignores matching directory names anywhere below the source root. Supported input extensions are BMP, GIF, ICO, JPEG, PNG, TIFF, and WebP. An animated input fails clearly; it is not silently reduced to one frame. SVG and application-native project files require separate rasterization.
 
@@ -36,4 +38,4 @@ This tool is used by the Cure Interactive development wiki, whose `_images/webp.
 
 ## Icon proposal
 
-`icon.svg` is the editable icon: a blue-to-magenta image tile, a white conversion arrow, and a green `W` tile for WebP. `icon.png` and `icon.ico` are derived from that SVG for the same root-level asset convention as the other Cure Interactive utilities. The converter remains a command-line tool; the icon does not add a desktop GUI.
+`_development/icon.svg` is the editable icon source, following the neighboring utilities' layout: a blue-to-magenta image tile, a white conversion arrow, and a green `W` tile for WebP. `icon.png` and `icon.ico` are its root-level derived assets. The converter remains a command-line tool; the icon does not add a desktop GUI.

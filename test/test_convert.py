@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -111,6 +113,19 @@ class ConvertTest(unittest.TestCase):
         self.image_save("photo.thumb.png", "blue")
         with self.assertRaisesRegex(ValueError, "output collision"):
             run(self.config)
+        self.assertFalse(self.target.exists())
+
+    def test_repository_named_and_legacy_cli(self) -> None:
+        self.image_save("picture.png", "red")
+        for script in ("image-to-webp.py", "convert.py"):
+            with self.subTest(script=script):
+                completed = subprocess.run(
+                    [sys.executable, str(ROOT / script), "--config", str(self.config), "--dry-run"],
+                    cwd=self.root, capture_output=True, text=True, check=False,
+                )
+                self.assertEqual(completed.returncode, 0, completed.stderr)
+                self.assertEqual(json.loads(completed.stdout.splitlines()[-1]),
+                                 {"converted": 0, "planned": 1, "skipped": 0})
         self.assertFalse(self.target.exists())
 
 

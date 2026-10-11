@@ -204,11 +204,11 @@ def run(config_path: Path, dry_run_is_active: bool = False) -> dict[str, int]:
     return counts
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, required=True, help="JSON mapping file")
     parser.add_argument("--dry-run", action="store_true", help="inspect conversion work without writing files")
-    arguments = parser.parse_args()
+    arguments = parser.parse_args(argv)
     try:
         run(arguments.config, arguments.dry_run)
     except (OSError, ValueError, json.JSONDecodeError) as error:
