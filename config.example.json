@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "source": "input",
+  "target": "output",
+  "cache": "_temp/webp-cache.json",
+  "quality": 85,
+  "method": 6,
+  "excludeDirectoryPrefixes": ["__"]
+}
