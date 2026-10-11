@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title description">
+  <title id="title">Image to WebP</title>
+  <desc id="description">A picture with a landscape converts to a compact W image tile.</desc>
+  <defs>
+    <linearGradient id="image" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#1684ff"/>
+      <stop offset="1" stop-color="#bd3c98"/>
+    </linearGradient>
+    <linearGradient id="webp" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#adf21c"/>
+      <stop offset="1" stop-color="#24d86b"/>
+    </linearGradient>
+  </defs>
+  <rect x="28" y="70" width="267" height="372" rx="52" fill="url(#image)"/>
+  <rect x="67" y="113" width="189" height="220" rx="23" fill="none" stroke="#fff" stroke-width="19"/>
+  <circle cx="119" cy="165" r="21" fill="#fff"/>
+  <path d="M77 303 136 236l39 39 26-29 45 51v27H77Z" fill="#fff"/>
+  <rect x="307" y="151" width="177" height="281" rx="39" fill="url(#webp)"/>
+  <path d="m331 234 21 112h30l16-68 16 68h30l21-112h-29l-10 70-16-70h-25l-16 70-10-70Z" fill="#17412d"/>
+  <path d="M237 365h88v-24l47 39-47 39v-24h-88Z" fill="#fff"/>
+</svg>

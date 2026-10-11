@@ -7,6 +7,14 @@ Convert a directory of raster images to WebP while retaining its subdirectory la
 - Python 3.10 or newer
 - Pillow 10–12 with WebP support (`requirements.txt`)
 
+## Install
+
+```sh
+python setup.py --venv
+```
+
+This creates `.venv` beside the script and installs `requirements.txt`. The setup command works from any current directory; use `--print-only` to inspect its commands. Activate the environment or run its Python directly when using `convert.py`.
+
 ## Configure and run
 
 Copy `config.example.json` and set `source`, `target`, and `cache`. Relative paths resolve from the JSON file, so the command can run from any working directory. `source` and `target` must differ. The tool creates the target and cache directories when needed.
@@ -25,3 +33,7 @@ Output is always `.webp`. Two sources mapping to the same output name cause an e
 Run `python -m unittest discover -s test` for the converter's local tests. Keep the cache outside version control when outputs are local. When outputs are committed, commit the cache with them so a fresh checkout can verify and skip those outputs; the Cure Interactive development wiki uses that arrangement. The example uses ignored `_temp/`.
 
 This tool is used by the Cure Interactive development wiki, whose `_images/webp.json` maps `_images/_original` to `_images`.
+
+## Icon proposal
+
+`icon.svg` is the editable icon: a blue-to-magenta image tile, a white conversion arrow, and a green `W` tile for WebP. `icon.png` and `icon.ico` are derived from that SVG for the same root-level asset convention as the other Cure Interactive utilities. The converter remains a command-line tool; the icon does not add a desktop GUI.
