@@ -7,7 +7,7 @@
   "method": 6,
   "excludeDirectoryPrefixes": ["__"],
   "thumbnail": {
-    "suffix": "_Thumb",
+    "suffix": ".thumb",
     "maxWidth": 512,
     "maxHeight": 256
   }
