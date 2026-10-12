@@ -1,5 +1,6 @@
 /_temp/
 /config.json
+/app-state.json
 __pycache__/
 *.py[cod]
 .venv/

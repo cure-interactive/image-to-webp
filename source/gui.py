@@ -16,6 +16,7 @@ import customtkinter as ctk
 from CTkToolTip import CTkToolTip
 
 from .convert import FORMAT_VERSION, config_validate, run
+from .recent import RecentConfigs
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -55,7 +56,9 @@ class App(ctk.CTk):
         if os.name == "nt" and (ROOT / "icon.ico").is_file():
             self.iconbitmap(str(ROOT / "icon.ico"))
 
+        self.recents = RecentConfigs(ROOT / "app-state.json")
         self.config_path = tk.StringVar(value=str(ROOT / "config.json"))
+        self.active_config_path = self.config_path.get()
         self.source = tk.StringVar()
         self.target = tk.StringVar()
         self.cache = tk.StringVar(value="_temp/webp-cache.json")
@@ -71,7 +74,7 @@ class App(ctk.CTk):
         self.events: Queue[tuple] = Queue()
         self.busy = False
         self._build()
-        initial_config = Path(self.config_path.get())
+        initial_config = Path(self.recents.paths[0]) if self.recents.paths else Path(self.config_path.get())
         if initial_config.is_file():
             self._load_config(initial_config)
         self.protocol("WM_DELETE_WINDOW", self._close)
@@ -91,10 +94,7 @@ class App(ctk.CTk):
         form = ctk.CTkScrollableFrame(self)
         form.grid(row=1, column=0, sticky="nsew", padx=16, pady=8)
         form.grid_columnconfigure(1, weight=1)
-        self._path_row(form, 0, "Config file", self.config_path, self._choose_config,
-                       "The JSON file that stores these settings. Paths typed below may be relative to this file. "
-                       "Dry run and Convert images save the current form here before starting.",
-                       extra=("Load", self._load_selected))
+        self._config_row(form)
         self._path_row(form, 1, "Input folder", self.source, lambda: self._choose_directory(self.source),
                        "The source folder to scan recursively for BMP, GIF, ICO, JPEG, PNG, TIFF, and WebP images. "
                        "Its subfolder layout is preserved in the output. Animated images stop with an error.")
@@ -205,9 +205,57 @@ class App(ctk.CTk):
         self.log.grid(row=3, column=0, sticky="ew", padx=12, pady=(0, 12))
         self.log.configure(state="disabled")
 
+    def _config_row(self, parent) -> None:
+        help_text = ("The JSON file that stores this conversion setup. Pick a recent config from the "
+                     "dropdown to load its input, output, cache, and settings, or type a path and press Load. "
+                     "Paths in a config may be relative to that file. Save, Dry run, and Convert add the "
+                     "selected config to local history after saving it.")
+        label = ctk.CTkLabel(parent, text="Config file")
+        label.grid(row=0, column=0, sticky="w", padx=10, pady=7)
+        self.config_combo = ctk.CTkComboBox(parent, variable=self.config_path,
+                                             values=self.recents.paths, command=self._select_recent)
+        self.config_combo.grid(row=0, column=1, sticky="ew", padx=10, pady=7)
+        tooltip(label, self.config_combo, text=help_text)
+        buttons = ctk.CTkFrame(parent, fg_color="transparent")
+        buttons.grid(row=0, column=2, sticky="e", padx=10, pady=7)
+        browse = ctk.CTkButton(buttons, text="Browse...", width=85, command=self._choose_config)
+        browse.pack(side="left")
+        tooltip(browse, text="Choose an existing conversion JSON file and load its settings. " + help_text)
+        load = ctk.CTkButton(buttons, text="Load", width=85, command=self._load_selected)
+        load.pack(side="left", padx=(8, 0))
+        tooltip(load, text="Load the JSON path shown in the config field. This replaces current form values "
+                "without starting a conversion. A successful load moves the config to the top of Recents.")
+        clear = ctk.CTkButton(buttons, text="Clear history", width=105, command=self._clear_recents)
+        clear.pack(side="left", padx=(8, 0))
+        tooltip(clear, text="Forget the list of recent conversion configs on this computer. "
+                "The current form and saved JSON config files are not changed or deleted.")
+
+    def _refresh_recents(self) -> None:
+        self.config_combo.configure(values=self.recents.paths)
+
+    def _remember_config(self, path: Path) -> None:
+        try:
+            self.recents.remember(path)
+        except OSError as error:
+            self.status.set(f"Config ready, but recent history could not be saved: {error}")
+        self._refresh_recents()
+
+    def _select_recent(self, chosen: str) -> None:
+        if not self._load_config(Path(chosen)):
+            self.config_path.set(self.active_config_path)
+
+    def _clear_recents(self) -> None:
+        try:
+            self.recents.clear()
+        except OSError as error:
+            messagebox.showerror(APP_TITLE, f"Could not clear history:\n{error}")
+            return
+        self._refresh_recents()
+        self.status.set("Recent config history cleared. Current settings are unchanged.")
+
     def _path_row(self, parent, row: int, label: str, variable: tk.StringVar, browse: Callable[[], None],
                   help_text: str,
-                  button_label: str = "Browse...", extra: tuple[str, Callable[[], None]] | None = None) -> None:
+                  button_label: str = "Browse...") -> None:
         field_label = ctk.CTkLabel(parent, text=label)
         field_label.grid(row=row, column=0, sticky="w", padx=10, pady=7)
         field_entry = ctk.CTkEntry(parent, textvariable=variable)
@@ -218,11 +266,6 @@ class App(ctk.CTk):
         browse_button = ctk.CTkButton(buttons, text=button_label, width=85, command=browse)
         browse_button.pack(side="left")
         tooltip(browse_button, text="Choose the " + label.lower() + " using a file or folder picker. " + help_text)
-        if extra is not None:
-            extra_button = ctk.CTkButton(buttons, text=extra[0], width=85, command=extra[1])
-            extra_button.pack(side="left", padx=(8, 0))
-            tooltip(extra_button, text="Load settings from the JSON path shown in the config file field. "
-                    "This replaces the current form values; it does not start a conversion.")
 
     def _choose_directory(self, variable: tk.StringVar) -> None:
         chosen = filedialog.askdirectory(initialdir=variable.get() or str(ROOT))
@@ -230,7 +273,10 @@ class App(ctk.CTk):
             variable.set(chosen)
 
     def _choose_config(self) -> None:
-        chosen = filedialog.askopenfilename(title="Load conversion config", filetypes=[("JSON", "*.json")])
+        current = Path(self.config_path.get()).expanduser()
+        initial = current.parent if current.parent.is_dir() else ROOT
+        chosen = filedialog.askopenfilename(title="Load conversion config", initialdir=initial,
+                                             filetypes=[("JSON", "*.json")])
         if chosen:
             self.config_path.set(chosen)
             self._load_config(Path(chosen))
@@ -244,18 +290,23 @@ class App(ctk.CTk):
     def _load_selected(self) -> None:
         self._load_config(Path(self.config_path.get()).expanduser())
 
-    def _load_config(self, path: Path) -> None:
+    def _load_config(self, path: Path) -> bool:
         try:
             config = json.loads(path.read_text(encoding="utf-8"))
             if not isinstance(config, dict) or config.get("version") != FORMAT_VERSION:
                 raise ValueError(f"config must declare version {FORMAT_VERSION}")
+            prefixes = config.get("excludeDirectoryPrefixes", [])
+            if not isinstance(prefixes, list) or not all(isinstance(item, str) for item in prefixes):
+                raise ValueError("excludeDirectoryPrefixes must be a list of strings")
+            thumb = config.get("thumbnail")
+            if thumb is not None and not isinstance(thumb, dict):
+                raise ValueError("thumbnail must be an object or null")
             self.source.set(config.get("source", ""))
             self.target.set(config.get("target", ""))
             self.cache.set(config.get("cache", ""))
             self.quality.set(str(config.get("quality", 85)))
             self.method.set(str(config.get("method", 6)))
-            self.prefixes.set(", ".join(config.get("excludeDirectoryPrefixes", [])))
-            thumb = config.get("thumbnail")
+            self.prefixes.set(", ".join(prefixes))
             self.thumbnail_enabled.set(thumb is not None)
             self.thumbnail_skip_when_source_fits.set(False)
             if isinstance(thumb, dict):
@@ -264,9 +315,13 @@ class App(ctk.CTk):
                 self.thumbnail_height.set(str(thumb.get("maxHeight", 256)))
                 self.thumbnail_skip_when_source_fits.set(thumb.get("skipWhenSourceFits", False))
             self.config_path.set(str(path.resolve()))
+            self.active_config_path = self.config_path.get()
             self.status.set(f"Loaded {path}")
+            self._remember_config(path)
+            return True
         except (OSError, ValueError, TypeError, json.JSONDecodeError) as error:
             messagebox.showerror(APP_TITLE, f"Could not load config:\n{error}")
+            return False
 
     def _settings(self) -> dict:
         try:
@@ -309,6 +364,8 @@ class App(ctk.CTk):
             if temporary is not None:
                 temporary.unlink(missing_ok=True)
         self.config_path.set(str(path))
+        self.active_config_path = self.config_path.get()
+        self._remember_config(path)
         return path
 
     def _save_clicked(self) -> None:
@@ -320,7 +377,10 @@ class App(ctk.CTk):
         self.status.set(f"Saved {path}")
 
     def _save_as_clicked(self) -> None:
-        chosen = filedialog.asksaveasfilename(title="Save conversion config", defaultextension=".json",
+        current = Path(self.config_path.get()).expanduser()
+        initial = current.parent if current.parent.is_dir() else ROOT
+        chosen = filedialog.asksaveasfilename(title="Save conversion config", initialdir=initial,
+                                               defaultextension=".json",
                                                filetypes=[("JSON", "*.json")])
         if chosen:
             self.config_path.set(chosen)
