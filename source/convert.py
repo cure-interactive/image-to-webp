@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 import sys
 import tempfile
+from typing import Callable
 
 from PIL import Image, UnidentifiedImageError, __version__ as PILLOW_VERSION
 
@@ -38,8 +39,14 @@ def file_hash(path: Path) -> str:
 
 def config_load(path: Path) -> dict:
     config = json.loads(path.read_text(encoding="utf-8"))
+    return config_validate(config, path.parent)
+
+
+def config_validate(config: dict, base_dir: Path) -> dict:
+    """Validate settings and resolve paths with the same rules for CLI and GUI."""
     if not isinstance(config, dict) or config.get("version") != FORMAT_VERSION:
         raise ValueError(f"config must declare version {FORMAT_VERSION}")
+    config = config.copy()
     for name in ("source", "target", "cache"):
         if not isinstance(config.get(name), str) or not config[name].strip():
             raise ValueError(f"config {name} must be a nonempty path")
@@ -56,6 +63,7 @@ def config_load(path: Path) -> dict:
     if thumbnail is not None:
         if not isinstance(thumbnail, dict):
             raise ValueError("config thumbnail must be an object")
+        thumbnail = thumbnail.copy()
         suffix = thumbnail.get("suffix")
         if (not isinstance(suffix, str) or not suffix or suffix in (".", "..")
                 or any(character in suffix for character in ("/", "\\", ":"))):
@@ -64,9 +72,13 @@ def config_load(path: Path) -> dict:
             value = thumbnail.get(name)
             if type(value) is not int or not 1 <= value <= 16384:
                 raise ValueError(f"config thumbnail {name} must be an integer from 1 to 16384")
+        thumbnail_is_skipped_when_source_fits = thumbnail.get("skipWhenSourceFits", False)
+        if type(thumbnail_is_skipped_when_source_fits) is not bool:
+            raise ValueError("config thumbnail skipWhenSourceFits must be a boolean")
+        thumbnail["skipWhenSourceFits"] = thumbnail_is_skipped_when_source_fits
         config["thumbnail"] = thumbnail
     for name in ("source", "target", "cache"):
-        config[name] = (path.parent / config[name]).resolve()
+        config[name] = (base_dir / config[name]).resolve()
     if not config["source"].is_dir():
         raise ValueError(f"source directory does not exist: {config['source']}")
     if config["source"] == config["target"]:
@@ -118,8 +130,14 @@ def source_list(config: dict) -> list[Conversion]:
         planned = [(relative, None)]
         if config.get("thumbnail") is not None:
             thumbnail = config["thumbnail"]
-            thumbnail_relative = relative.with_name(relative.stem + thumbnail["suffix"] + relative.suffix)
-            planned.append((thumbnail_relative, (thumbnail["maxWidth"], thumbnail["maxHeight"])))
+            thumbnail_is_needed = True
+            if thumbnail["skipWhenSourceFits"]:
+                with Image.open(path) as image:
+                    thumbnail_is_needed = (image.width > thumbnail["maxWidth"]
+                                           or image.height > thumbnail["maxHeight"])
+            if thumbnail_is_needed:
+                thumbnail_relative = relative.with_name(relative.stem + thumbnail["suffix"] + relative.suffix)
+                planned.append((thumbnail_relative, (thumbnail["maxWidth"], thumbnail["maxHeight"])))
         for output_relative, thumbnail_size in planned:
             destination = config["target"] / output_relative.with_suffix(".webp")
             if not destination.parent.resolve().is_relative_to(config["target"]):
@@ -165,13 +183,14 @@ def image_convert(source: Path, destination: Path, quality: int, method: int,
             temporary_path.unlink(missing_ok=True)
 
 
-def run(config_path: Path, dry_run_is_active: bool = False) -> dict[str, int]:
+def run(config_path: Path, dry_run_is_active: bool = False,
+        progress: Callable[[int, int, str], None] | None = None) -> dict[str, int]:
     config = config_load(config_path.resolve())
     sources = source_list(config)
     entries = cache_load(config["cache"])
     signature = f"converter={CONVERTER_VERSION};pillow={PILLOW_VERSION};quality={config['quality']};method={config['method']}"
     counts = {"converted": 0, "skipped": 0, "planned": 0}
-    for conversion in sources:
+    for index, conversion in enumerate(sources, start=1):
         source, destination = conversion.source, conversion.destination
         relative = conversion.cache_key
         job_signature = signature
@@ -184,12 +203,16 @@ def run(config_path: Path, dry_run_is_active: bool = False) -> dict[str, int]:
         if (isinstance(entry, dict) and entry.get("sourceSha256") == source_digest
                 and entry.get("signature") == job_signature and entry.get("outputSha256") == output_digest):
             counts["skipped"] += 1
+            if progress is not None:
+                progress(index, len(sources), f"Skipped: {source}")
             continue
         if output_digest is not None and (not isinstance(entry, dict) or entry.get("outputSha256") != output_digest):
             raise ValueError(f"output is not the last cached result; refusing to overwrite: {destination}")
         if dry_run_is_active:
             counts["planned"] += 1
             print(f"would convert: {source} -> {destination}")
+            if progress is not None:
+                progress(index, len(sources), f"Would convert: {source}")
             continue
         try:
             image_convert(source, destination, config["quality"], config["method"], conversion.thumbnail_size)
@@ -200,6 +223,8 @@ def run(config_path: Path, dry_run_is_active: bool = False) -> dict[str, int]:
         cache_save(config["cache"], entries)
         counts["converted"] += 1
         print(f"converted: {source} -> {destination}")
+        if progress is not None:
+            progress(index, len(sources), f"Converted: {source}")
     print(json.dumps(counts, sort_keys=True))
     return counts
 

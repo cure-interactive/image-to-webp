@@ -9,7 +9,7 @@ import unittest
 
 from PIL import Image
 
-from convert import run
+from source.convert import config_validate, run
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -115,9 +115,53 @@ class ConvertTest(unittest.TestCase):
             run(self.config)
         self.assertFalse(self.target.exists())
 
-    def test_repository_named_and_legacy_cli(self) -> None:
+    def test_skip_thumbnail_when_source_fits(self) -> None:
+        self.config.write_text(json.dumps({
+            "version": 1, "source": "input", "target": "output", "cache": "cache.json",
+            "thumbnail": {"suffix": ".thumb", "maxWidth": 200, "maxHeight": 100,
+                          "skipWhenSourceFits": True},
+        }), encoding="utf-8")
+        for name, size in (("small.png", (8, 6)), ("boundary.png", (200, 100)),
+                           ("wide.png", (201, 50)), ("tall.png", (100, 101))):
+            Image.new("RGB", size, "red").save(self.source / name)
+
+        self.assertEqual(run(self.config, True), {"converted": 0, "skipped": 0, "planned": 6})
+        self.assertEqual(run(self.config), {"converted": 6, "skipped": 0, "planned": 0})
+        for name in ("small", "boundary", "wide", "tall"):
+            self.assertTrue((self.target / f"{name}.webp").is_file())
+        for name in ("small", "boundary"):
+            self.assertFalse((self.target / f"{name}.thumb.webp").exists())
+        for name in ("wide", "tall"):
+            self.assertTrue((self.target / f"{name}.thumb.webp").is_file())
+        self.assertEqual(run(self.config, True), {"converted": 0, "skipped": 6, "planned": 0})
+
+    def test_thumbnail_skip_defaults_off_and_keeps_prior_output(self) -> None:
+        self.config.write_text(json.dumps({
+            "version": 1, "source": "input", "target": "output", "cache": "cache.json",
+            "thumbnail": {"suffix": ".thumb", "maxWidth": 200, "maxHeight": 100},
+        }), encoding="utf-8")
+        self.image_save("small.png", "red")
+        self.assertEqual(run(self.config), {"converted": 2, "skipped": 0, "planned": 0})
+        thumbnail = self.target / "small.thumb.webp"
+        prior_output = thumbnail.read_bytes()
+        prior_cache = (self.root / "cache.json").read_bytes()
+        config = json.loads(self.config.read_text(encoding="utf-8"))
+        config["thumbnail"]["skipWhenSourceFits"] = True
+        self.config.write_text(json.dumps(config), encoding="utf-8")
+        self.assertEqual(run(self.config), {"converted": 0, "skipped": 1, "planned": 0})
+        self.assertEqual(thumbnail.read_bytes(), prior_output)
+        self.assertEqual((self.root / "cache.json").read_bytes(), prior_cache)
+
+    def test_thumbnail_skip_requires_boolean(self) -> None:
+        config = {"version": 1, "source": "input", "target": "output", "cache": "cache.json",
+                  "thumbnail": {"suffix": ".thumb", "maxWidth": 200, "maxHeight": 100,
+                                "skipWhenSourceFits": "yes"}}
+        with self.assertRaisesRegex(ValueError, "skipWhenSourceFits must be a boolean"):
+            config_validate(config, self.root)
+
+    def test_repository_named_and_source_cli(self) -> None:
         self.image_save("picture.png", "red")
-        for script in ("image-to-webp.py", "convert.py"):
+        for script in ("image-to-webp.py", "source/convert.py"):
             with self.subTest(script=script):
                 completed = subprocess.run(
                     [sys.executable, str(ROOT / script), "--config", str(self.config), "--dry-run"],

@@ -5,7 +5,7 @@ Convert a directory of raster images to WebP while retaining its subdirectory la
 ## Requirements
 
 - Python 3.10 or newer
-- Pillow 10–12 with WebP support (`requirements.txt`)
+- Pillow 10–12 with WebP support and CustomTkinter (`requirements.txt`)
 
 ## Install
 
@@ -14,6 +14,13 @@ python setup.py --venv
 ```
 
 This creates `.venv` beside the script and installs `requirements.txt`. The setup command works from any current directory; use `--print-only` to inspect its commands. Activate the environment or run its Python directly when using `image-to-webp.py`.
+
+## Desktop app
+
+Double-click `image-to-webp.py` on Windows, or run `python image-to-webp.py` without arguments, to open the desktop interface. Windows uses the Python on `PATH` for this file's launcher; that interpreter needs Tkinter and the packages in `requirements.txt`. It is the only root-level app launcher; the GUI implementation and converter live in `source/`. Choose an input folder, an output folder, and a cache file. Adjust quality (1–100), method (0–6), excluded folder prefixes, and optional thumbnail settings. **Dry run** previews conversion work; **Convert images** writes WebP files. Both actions save the current settings to the selected config file first. The default local `config.json` is ignored by Git. Use **Browse...** and **Load** to open an existing config, including `config.example.json` as a starting point; use **Save as...** to keep the example unchanged.
+
+The progress area reports each image and the converted, skipped, and planned totals. Existing output changed outside this tool is refused rather than overwritten.
+Hover over a field, label, or action button for detailed help about its effect and valid values.
 
 ## Configure and run
 
@@ -24,13 +31,13 @@ python image-to-webp.py --config path/to/config.json --dry-run
 python image-to-webp.py --config path/to/config.json
 ```
 
-`image-to-webp.py` is the repository-named CLI entry point. `convert.py` retains the same command-line options and Python `run()` interface for existing callers, including the Cure Interactive development wiki.
+`image-to-webp.py` opens the desktop app without arguments and accepts the same command-line options when arguments are provided. Automation can also run `source/convert.py` directly or import `run()` from `source.convert`.
 
 `quality` is 1–100 (default 85), and `method` is 0–6 (default 6). `excludeDirectoryPrefixes` ignores matching directory names anywhere below the source root. Supported input extensions are BMP, GIF, ICO, JPEG, PNG, TIFF, and WebP. An animated input fails clearly; it is not silently reduced to one frame. SVG and application-native project files require separate rasterization.
 
-An optional `thumbnail` recipe generates a second WebP from each source without requiring another original. Its `suffix` is appended before `.webp`; `maxWidth` and `maxHeight` bound the thumbnail while preserving aspect ratio and avoiding enlargement. For example, `photo.png` produces both `photo.webp` and `photo.thumb.webp` with the example configuration. Omit `thumbnail` to retain the original one-output behavior. Existing source files that would collide with a generated thumbnail cause an error before conversion; remove or rename those sources only after preserving them separately.
+An optional `thumbnail` recipe generates a second WebP from each source without requiring another original. Its `suffix` is appended before `.webp`; `maxWidth` and `maxHeight` bound the thumbnail while preserving aspect ratio and avoiding enlargement. For example, `photo.png` produces both `photo.webp` and `photo.thumb.webp` with the example configuration. Set `skipWhenSourceFits` to `true` to omit the thumbnail when the source width and height are both within those bounds; the full WebP is still created. This setting defaults to `false` for existing configurations. Omit `thumbnail` to retain the original one-output behavior. Existing source files that would collide with a generated thumbnail cause an error before conversion; remove or rename those sources only after preserving them separately.
 
-Output is always `.webp`. Two sources mapping to the same output name cause an error before conversion. Existing output that is absent from the cache, or changed since the last cached conversion, is never overwritten. Generated output and cache writes are atomic. Thumbnail cache entries include their size and resampling recipe, so changing those settings regenerates only affected thumbnails. Removing a source does not delete its output.
+Output is always `.webp`. Two sources mapping to the same output name cause an error before conversion. Existing output that is absent from the cache, or changed since the last cached conversion, is never overwritten. Generated output and cache writes are atomic. Thumbnail cache entries include their size and resampling recipe, so changing those settings regenerates only affected thumbnails. Removing a source or enabling the thumbnail skip option does not delete existing output or cache entries; review any links before removing old thumbnails yourself.
 
 Run `python -m unittest discover -s test` for the converter's local tests. Keep the cache outside version control when outputs are local. When outputs are committed, commit the cache with them so a fresh checkout can verify and skip those outputs; the Cure Interactive development wiki uses that arrangement. The example uses ignored `_temp/`.
 
@@ -38,4 +45,4 @@ This tool is used by the Cure Interactive development wiki, whose `_images/webp.
 
 ## Icon proposal
 
-`_development/icon.svg` is the editable icon source, following the neighboring utilities' layout: a blue-to-magenta image tile, a white conversion arrow, and a green `W` tile for WebP. `icon.png` and `icon.ico` are its root-level derived assets. The converter remains a command-line tool; the icon does not add a desktop GUI.
+`_development/icon.svg` is the editable icon source, following the neighboring utilities' layout: a blue-to-magenta image tile, a white conversion arrow, and a green `W` tile for WebP. `icon.png` and `icon.ico` are its root-level derived assets. The desktop app uses `icon.ico` as its window icon on Windows.

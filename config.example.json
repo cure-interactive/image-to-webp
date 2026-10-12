@@ -9,6 +9,7 @@
   "thumbnail": {
     "suffix": ".thumb",
     "maxWidth": 512,
-    "maxHeight": 256
+    "maxHeight": 256,
+    "skipWhenSourceFits": false
   }
 }
