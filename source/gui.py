@@ -57,7 +57,7 @@ class App(ctk.CTk):
             self.iconbitmap(str(ROOT / "icon.ico"))
 
         self.recents = RecentConfigs(ROOT / "app-state.json")
-        self.config_path = tk.StringVar(value=str(ROOT / "config.json"))
+        self.config_path = tk.StringVar(value=str(ROOT / "image-to-webp.json"))
         self.active_config_path = self.config_path.get()
         self.source = tk.StringVar()
         self.target = tk.StringVar()

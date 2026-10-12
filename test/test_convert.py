@@ -25,7 +25,7 @@ class ConvertTest(unittest.TestCase):
         self.source = self.root / "input"
         self.target = self.root / "output"
         self.source.mkdir()
-        self.config = self.root / "config.json"
+        self.config = self.root / "image-to-webp.json"
         self.config.write_text(json.dumps({
             "version": 1,
             "source": "input",

@@ -17,18 +17,18 @@ This creates `.venv` beside the script and installs `requirements.txt`. The setu
 
 ## Desktop app
 
-Double-click `image-to-webp.py` on Windows, or run `python image-to-webp.py` without arguments, to open the desktop interface. The Windows `.py` association may use a different Python from `python` on `PATH`; if its GUI dependencies are unavailable, this launcher uses the `python` on `PATH` when that interpreter has Tkinter and the packages in `requirements.txt`. Otherwise it prints a setup error. It is the only root-level app launcher; the GUI implementation and converter live in `source/`. Choose an input folder, an output folder, and a cache file. Adjust quality (1–100), method (0–6), excluded folder prefixes, and optional thumbnail settings. **Dry run** previews conversion work; **Convert images** writes WebP files. Both actions save the current settings to the selected config file first. The default local `config.json` is ignored by Git. Use **Browse...** and **Load** to open an existing config, including `config.example.json` as a starting point; use **Save as...** to keep the example unchanged. The config dropdown lists recently loaded or saved configs, newest first, and the latest is restored when the app opens. **Clear history** forgets that list without deleting configs or changing the current form. Missing configs are removed from the list. History is kept in ignored, machine-local `app-state.json`.
+Double-click `image-to-webp.py` on Windows, or run `python image-to-webp.py` without arguments, to open the desktop interface. The Windows `.py` association may use a different Python from `python` on `PATH`; if its GUI dependencies are unavailable, this launcher uses the `python` on `PATH` when that interpreter has Tkinter and the packages in `requirements.txt`. Otherwise it prints a setup error. It is the only root-level app launcher; the GUI implementation and converter live in `source/`. Choose an input folder, an output folder, and a cache file. Adjust quality (1–100), method (0–6), excluded folder prefixes, and optional thumbnail settings. **Dry run** previews conversion work; **Convert images** writes WebP files. Both actions save the current settings to the selected config file first. The default local `image-to-webp.json` is ignored by Git. Use **Browse...** and **Load** to open an existing config, including `image-to-webp.example.json` as a starting point; use **Save as...** to keep the example unchanged. The config dropdown lists recently loaded or saved configs, newest first, and the latest is restored when the app opens. **Clear history** forgets that list without deleting configs or changing the current form. Missing configs are removed from the list. History is kept in ignored, machine-local `app-state.json`.
 
 The progress area reports each image and the converted, skipped, and planned totals. Existing output changed outside this tool is refused rather than overwritten.
 Hover over a field, label, or action button for detailed help about its effect and valid values.
 
 ## Configure and run
 
-Copy `config.example.json` and set `source`, `target`, and `cache`. Relative paths resolve from the JSON file, so the command can run from any working directory. `source` and `target` must differ. The tool creates the target and cache directories when needed.
+Copy `image-to-webp.example.json` and set `source`, `target`, and `cache`. Relative paths resolve from the JSON file, so the command can run from any working directory. `source` and `target` must differ. The tool creates the target and cache directories when needed.
 
 ```sh
-python image-to-webp.py --config path/to/config.json --dry-run
-python image-to-webp.py --config path/to/config.json
+python image-to-webp.py --config path/to/image-to-webp.json --dry-run
+python image-to-webp.py --config path/to/image-to-webp.json
 ```
 
 `image-to-webp.py` opens the desktop app without arguments and accepts the same command-line options when arguments are provided. Automation can also run `source/convert.py` directly or import `run()` from `source.convert`.
@@ -41,7 +41,7 @@ Output is always `.webp`. Two sources mapping to the same output name cause an e
 
 Run `python -m unittest discover -s test` for the converter's local tests. Keep the cache outside version control when outputs are local. When outputs are committed, commit the cache with them so a fresh checkout can verify and skip those outputs; the Cure Interactive development wiki uses that arrangement. The example uses ignored `_temp/`.
 
-This tool is used by the Cure Interactive development wiki, whose `_images/webp.json` maps `_images/_original` to `_images`.
+This tool is used by the Cure Interactive development wiki, whose `_images/image-to-webp.json` maps `_images/_original` to `_images`.
 
 ## Icon proposal
 
