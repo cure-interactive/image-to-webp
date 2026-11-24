@@ -61,7 +61,7 @@ class App(ctk.CTk):
         self.active_config_path = self.config_path.get()
         self.source = tk.StringVar()
         self.target = tk.StringVar()
-        self.cache = tk.StringVar(value="_temp/webp-cache.json")
+        self.cache = tk.StringVar(value="__temp/webp-cache.json")
         self.quality = tk.StringVar(value="85")
         self.method = tk.StringVar(value="6")
         self.prefixes = tk.StringVar(value="__")

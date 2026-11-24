@@ -39,7 +39,7 @@ An optional `thumbnail` recipe generates a second WebP from each source without 
 
 Output is always `.webp`. Two sources mapping to the same output name cause an error before conversion. Existing output that is absent from the cache, or changed since the last cached conversion, is never overwritten. Generated output and cache writes are atomic. Thumbnail cache entries include their size and resampling recipe, so changing those settings regenerates only affected thumbnails. Removing a source or enabling the thumbnail skip option does not delete existing output or cache entries; review any links before removing old thumbnails yourself.
 
-Run `python -m unittest discover -s test` for the converter's local tests. Keep the cache outside version control when outputs are local. When outputs are committed, commit the cache with them so a fresh checkout can verify and skip those outputs; the Cure Interactive development wiki uses that arrangement. The example uses ignored `_temp/`.
+Run `python -m unittest discover -s test` for the converter's local tests. Keep the cache outside version control when outputs are local. When outputs are committed, commit the cache with them so a fresh checkout can verify and skip those outputs; the Cure Interactive development wiki uses that arrangement. The example uses ignored `__temp/`.
 
 This tool is used by the Cure Interactive development wiki, whose `_images/image-to-webp.json` maps `_images/_original` to `_images`.
 

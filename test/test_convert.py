@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class ConvertTest(unittest.TestCase):
     def setUp(self) -> None:
-        scratch = ROOT / "_temp"
+        scratch = ROOT / "__temp"
         scratch.mkdir(exist_ok=True)
         self.temporary = tempfile.TemporaryDirectory(dir=scratch)
         self.addCleanup(self.temporary.cleanup)
